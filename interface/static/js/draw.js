@@ -5,21 +5,33 @@ const predictButton = document.getElementById("predict");
 let isDrawing = false;
 let csrftoken = document.getElementById("csrf-token").value;
 
+canvas.width = 28;
+canvas.height = 28;
+
+canvas.style.width = "280px";
+canvas.style.height = "280px";
+
 ctx.fillStyle = "white";
 ctx.fillRect(0, 0, canvas.width, canvas.height);
-ctx.lineWidth = 10;
-ctx.lineCap = "round";
+ctx.lineWidth = 2;
+ctx.lineCap = "square";
 ctx.strokeStyle = "black";
 
 canvas.addEventListener("mousedown", () => isDrawing = true);
-canvas.addEventListener("mouseup", () => isDrawing = false);
+canvas.addEventListener("mouseup", () => {
+    isDrawing = false;
+    ctx.beginPath();
+});
 canvas.addEventListener("mouseleave", () => isDrawing = false);
 
 canvas.addEventListener("mousemove", (event) => {
     if (!isDrawing) return;
     let rect = canvas.getBoundingClientRect();
-    let x = event.clientX - rect.left;
-    let y = event.clientY - rect.top;
+    
+    // Scale down to 28x28 coordinates
+    let x = Math.floor((event.clientX - rect.left) * (canvas.width / rect.width));
+    let y = Math.floor((event.clientY - rect.top) * (canvas.height / rect.height));
+
     ctx.lineTo(x, y);
     ctx.stroke();
     ctx.beginPath();
@@ -28,6 +40,7 @@ canvas.addEventListener("mousemove", (event) => {
 
 resetButton.addEventListener("click", () => {
     document.getElementById("prediction_box").innerText = "Draw a Number";
+    ctx.fillStyle = "white";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.beginPath();
 });
@@ -39,9 +52,9 @@ async function predict() {
     for (let i = 0; i < 28; i++) {
         let row = [];
         for (let j = 0; j < 28; j++) {
-            let index = (i * 10 * canvas.width + j * 10) * 4;
-            let pixel = imageData.data[index]; 
-            row.push(pixel < 128 ? 1 : 0);
+            let index = (i * canvas.width + j) * 4;
+            let pixel = imageData.data[index];
+            row.push(255 - pixel);
         }
         grayscaleImage.push(row);
     }
@@ -57,7 +70,7 @@ async function predict() {
         });
 
         let data = await response.json();
-        document.getElementById("prediction_box").innerText = "The number is: " +  data.prediction;
+        document.getElementById("prediction_box").innerText = "The number is: " + data.prediction;
         console.log("Prediction:", data);
     } catch (error) {
         console.error("Error:", error);
